@@ -44,7 +44,4 @@ if st.button('Prediksi'):
 
 if __name__ == "__main__":
     port = '8080'
-    st._is_running_with_streamlit = True
-    from streamlit.cli import main
-    sys.argv = ["streamlit", "run", "app.py", "--server.port", str(port), "--server.address", "0.0.0.0"]
-    sys.exit(main())
+    st.run_server(port=port, address="0.0.0.0")
