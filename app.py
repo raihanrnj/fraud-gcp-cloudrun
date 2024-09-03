@@ -41,7 +41,3 @@ if st.button('Prediksi'):
     proba_df = pd.DataFrame(prediction_proba, columns=iris)
     st.write(proba_df)
 
-
-if __name__ == "__main__":
-    port = '8080'
-    st.run_server(port=port, address="0.0.0.0")
