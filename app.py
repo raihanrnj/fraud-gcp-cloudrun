@@ -12,16 +12,16 @@ def load_best_model():
     mlflow.set_tracking_uri("http://34.128.92.38:5000")  # Update with your MLflow server URI
     experiment_name = "model_fraud"  # Update with your experiment name
 
-    # # Get the experiment ID
+    # Get the experiment ID
     experiment_id = mlflow.get_experiment_by_name(experiment_name).experiment_id
 
     df = mlflow.search_runs(experiment_ids=[experiment_id])
 
-    # Inisialisasi variabel
+    # Initialize variables
     best_metric = -float('inf')
     best_run = None
 
-    # Ambil kolom 'metrics.accuracy' dari DataFrame
+    # Iterate through DataFrame and find the best model by accuracy
     for index, row in df.iterrows():
         test_accuracy = row['metrics.accuracy']
         if test_accuracy > best_metric:
@@ -30,13 +30,8 @@ def load_best_model():
     if best_run is None:
         raise RuntimeError("No runs found in the specified experiment.")
 
-    # # Load the model from the best run
-    # model_uri = f"runs:/{best_run.info.run_id}/random_forest_model_pipeline"  # Update with your model's name
-    model_uri = f"runs:/{best_run['run_id']+'/'+best_run['tags.mlflow.runName']+"_pipeline_model"}" 
-    # pipeline = mlflow.sklearn.load_model(model_uri)
-
     # Load the model from the best run
-    # model_uri = f"runs:/{best_run.info.run_id}/random_forest_model_pipeline"  # Update w-ith your model's name
+    model_uri = f"runs:/{best_run['run_id']}/{best_run['tags.mlflow.runName']}_pipeline_model" 
     return mlflow.sklearn.load_model(model_uri)
 
 # Load the best model when the app starts
@@ -55,6 +50,11 @@ def predict():
     predictions = pipeline.predict(data)
     
     return jsonify({"predictions": predictions.tolist()})
+
+# Default route to display "Hello, World"
+@app.route('/')
+def home():
+    return "<h1>Hello, World!</h1><p>This is the main page.</p>"
 
 # Run the API
 if __name__ == "__main__":
