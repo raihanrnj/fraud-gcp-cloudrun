@@ -1,50 +1,61 @@
-# app.py
-import streamlit as st
-import pickle
-import numpy as np
+from flask import Flask, request, jsonify
 import pandas as pd
+import mlflow
+import mlflow.sklearn
 
-# Fungsi untuk memuat model yang telah dilatih
-@st.cache_resource
-def load_model():
-    with open('iris_model.pkl', 'rb') as f:
-        model = pickle.load(f)
-    return model
+# Initiate Flask app
+app = Flask(__name__)
 
-model = load_model()
+# Function to load the best model from MLflow
+def load_best_model():
+    # Define your MLflow tracking URI and experiment name (if needed)
+    mlflow.set_tracking_uri("http://34.128.92.38:5000")  # Update with your MLflow server URI
+    experiment_name = "model_fraud"  # Update with your experiment name
 
-st.title("Prediksi Bunga Iris")
+    # # Get the experiment ID
+    experiment_id = mlflow.get_experiment_by_name(experiment_name).experiment_id
 
-st.write("""
-### Masukkan fitur-fitur berikut untuk memprediksi jenis bunga Iris:
-""")
+    df = mlflow.search_runs(experiment_ids=[experiment_id])
 
-# Input untuk fitur-fitur Iris
-sepal_length = st.number_input('Panjang Sepal (cm)', min_value=0.0, max_value=10.0, value=5.0)
-sepal_width = st.number_input('Lebar Sepal (cm)', min_value=0.0, max_value=10.0, value=3.5)
-petal_length = st.number_input('Panjang Petal (cm)', min_value=0.0, max_value=10.0, value=1.4)
-petal_width = st.number_input('Lebar Petal (cm)', min_value=0.0, max_value=10.0, value=0.2)
+    # Inisialisasi variabel
+    best_metric = -float('inf')
+    best_run = None
 
-# Tombol untuk melakukan prediksi
-if st.button('Prediksi'):
-    # Menyiapkan data input
-    input_data = np.array([[sepal_length, sepal_width, petal_length, petal_width]])
-    prediction = model.predict(input_data)
-    prediction_proba = model.predict_proba(input_data)
+    # Ambil kolom 'metrics.accuracy' dari DataFrame
+    for index, row in df.iterrows():
+        test_accuracy = row['metrics.accuracy']
+        if test_accuracy > best_metric:
+            best_metric = test_accuracy
+            best_run = row
+    if best_run is None:
+        raise RuntimeError("No runs found in the specified experiment.")
 
-    # Memetakan hasil prediksi ke nama kelas
-    iris = ['Setosa', 'Versicolor', 'Virginica']
-    predicted_class = iris[prediction[0]]
+    # # Load the model from the best run
+    # model_uri = f"runs:/{best_run.info.run_id}/random_forest_model_pipeline"  # Update with your model's name
+    model_uri = f"runs:/{best_run['run_id']+'/'+best_run['tags.mlflow.runName']+"_pipeline_model"}" 
+    # pipeline = mlflow.sklearn.load_model(model_uri)
 
-    st.write(f"### Prediksi: **{predicted_class}**")
-    st.write("### Probabilitas Prediksi:")
-    proba_df = pd.DataFrame(prediction_proba, columns=iris)
-    st.write(proba_df)
+    # Load the model from the best run
+    # model_uri = f"runs:/{best_run.info.run_id}/random_forest_model_pipeline"  # Update w-ith your model's name
+    return mlflow.sklearn.load_model(model_uri)
 
+# Load the best model when the app starts
+pipeline = load_best_model()
 
+# Route for predictions
+@app.route('/predict', methods=['POST'])
+def predict():
+    global pipeline
+    if pipeline is None:
+        return jsonify({"error": "Model not loaded"}), 400
+
+    data = pd.DataFrame(request.json['data'])
+    
+    # Make predictions
+    predictions = pipeline.predict(data)
+    
+    return jsonify({"predictions": predictions.tolist()})
+
+# Run the API
 if __name__ == "__main__":
-    port = '8080'
-    st._is_running_with_streamlit = True
-    from streamlit.cli import main
-    sys.argv = ["streamlit", "run", "app.py", "--server.port", str(port), "--server.address", "0.0.0.0"]
-    sys.exit(main())
+    app.run(debug=True)

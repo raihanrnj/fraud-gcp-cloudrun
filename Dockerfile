@@ -1,26 +1,20 @@
-# Dockerfile
-FROM python:3.12-slim
+# Use an official Python runtime as the base image
+FROM python:3.10-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Install dependencies
-RUN pip install --upgrade pip
-
-# Membuat direktori kerja
+# Set the working directory in the container
 WORKDIR /app
 
-# Menyalin file requirements dan menginstalnya
-COPY requirements.txt /app/
-RUN pip install -r requirements.txt
+# Copy the requirements.txt to the container
+COPY requirements.txt .
 
-# Menyalin model dan kode aplikasi
-COPY iris_model.pkl /app/
-COPY app.py /app/
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Membuka port yang digunakan oleh Streamlit
+# Copy the current directory contents into the container at /app
+COPY . .
+
+# Expose port 8080 to match the Cloud Run requirements
 EXPOSE 8080
 
-# Perintah untuk menjalankan aplikasi Streamlit
-CMD ["streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0"]
+# Command to run the app (Gunicorn is a production-grade WSGI HTTP server)
+CMD ["gunicorn", "-b", "0.0.0.0:8080", "app:app"]
