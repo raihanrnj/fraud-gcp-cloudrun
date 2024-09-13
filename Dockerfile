@@ -16,5 +16,5 @@ COPY . .
 # Expose port 8080 to match the Cloud Run requirements
 EXPOSE 8080
 
-# Command to run the app (Gunicorn is a production-grade WSGI HTTP server)
-CMD ["gunicorn", "-b", "0.0.0.0:8080", "app:app"]
+# Command to run the app using Flask's built-in server
+CMD ["python", "app.py"]

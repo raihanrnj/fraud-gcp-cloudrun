@@ -56,6 +56,6 @@ def predict():
 def home():
     return "<h1>Hello, World!</h1><p>This is the main page.</p>"
 
-# Run the API
+# Run the app with Flask's built-in server
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=8080)
