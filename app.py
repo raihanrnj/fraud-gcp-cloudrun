@@ -60,7 +60,7 @@ async def predict(request: DataModel):
 # Default route to display "Hello, World"
 @app.get('/')
 async def home():
-    return {"message": "Hello, World! This is the main page."}
+    return {"message": "Hello, World! This is the main page!!!"}
 
 # Run the app with Uvicorn's server
 if __name__ == "__main__":
