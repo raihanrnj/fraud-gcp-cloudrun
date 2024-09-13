@@ -1,10 +1,12 @@
-from flask import Flask, request, jsonify
+from fastapi import FastAPI, Request
+from pydantic import BaseModel
 import pandas as pd
 import mlflow
 import mlflow.sklearn
+import uvicorn
 
-# Initiate Flask app
-app = Flask(__name__)
+# Initiate FastAPI app
+app = FastAPI()
 
 # Function to load the best model from MLflow
 def load_best_model():
@@ -31,31 +33,35 @@ def load_best_model():
         raise RuntimeError("No runs found in the specified experiment.")
 
     # Load the model from the best run
-    model_uri = f"runs:/{best_run['run_id']}/{best_run['tags.mlflow.runName']}_pipeline_model" 
+    model_uri = f"runs:/{best_run['run_id']}/{best_run['tags.mlflow.runName']}_pipeline_model"
     return mlflow.sklearn.load_model(model_uri)
 
 # Load the best model when the app starts
 pipeline = load_best_model()
 
+# Define a request model using Pydantic
+class DataModel(BaseModel):
+    data: list
+
 # Route for predictions
-@app.route('/predict', methods=['POST'])
-def predict():
+@app.post('/predict')
+async def predict(request: DataModel):
     global pipeline
     if pipeline is None:
-        return jsonify({"error": "Model not loaded"}), 400
+        return {"error": "Model not loaded"}
 
-    data = pd.DataFrame(request.json['data'])
-    
+    data = pd.DataFrame(request.data)
+
     # Make predictions
     predictions = pipeline.predict(data)
-    
-    return jsonify({"predictions": predictions.tolist()})
+
+    return {"predictions": predictions.tolist()}
 
 # Default route to display "Hello, World"
-@app.route('/')
-def home():
-    return "<h1>Hello, World!</h1><p>This is the main page.</p>"
+@app.get('/')
+async def home():
+    return {"message": "Hello, World! This is the main page."}
 
-# Run the app with Flask's built-in server
+# Run the app with Uvicorn's server
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0")
+    uvicorn.run("app:app", host="0.0.0.0", port=8080, reload=True)
